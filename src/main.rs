@@ -15,10 +15,7 @@ pub unsafe extern "C" fn notmain() -> ! {
     gpio_set_output(20);
     gpio_set_output(25);
     loop {
-        let message = "Light on from rusty-pi!\n";
-        for byte in message.bytes() {
-            uart_put8(byte);
-        }
+        uart_write("Light on from rusty-pi!\n");
         let c = uart_get8() as char;
         match c {
             'g' => match gpio_read(20) {
@@ -32,10 +29,7 @@ pub unsafe extern "C" fn notmain() -> ! {
                 _ => panic!("invalid bit!")
             }
             o => {
-                let msg2 = "Invalid key: ";
-                for byte in msg2.bytes() {
-                    uart_put8(byte);
-                }
+                uart_write("Invalid key: ");
                 uart_put8(o as u8);
                 uart_put8('\n' as u8);
             }
