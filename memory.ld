@@ -60,4 +60,11 @@ SECTIONS {
         . = ALIGN(8);
         __symbol_exec_end__ = .;
     }
+    .tstack 0xC0000 : {
+        . = ALIGN(8);
+        __symbol_tstack_start__ = .;
+        *(.stack_section)
+        . = . + 0x20000;
+        __symbol_tstack_end__ = .;
+    }
 }
