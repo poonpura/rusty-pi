@@ -4,9 +4,9 @@ extern "C" {
     fn notmain(); 
 }
 
+/// Initialize stack pointer 
 #[no_mangle]
 #[link_section = ".text.boot"]
-/// Initialize stack pointer 
 pub unsafe extern "C" fn _start() -> ! {
     asm!(
         "ldr sp, =0x80000",  
@@ -15,8 +15,8 @@ pub unsafe extern "C" fn _start() -> ! {
     );
 }
 
-#[no_mangle]
 /// Zeroes out bss and calls notmain()
+#[no_mangle]
 pub unsafe extern "C" fn _start2() -> ! {
     let bss_start: *mut u32;
     let bss_end: *mut u32;

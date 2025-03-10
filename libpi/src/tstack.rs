@@ -1,7 +1,7 @@
 /// Mini stack memory allocator for 8-thread kernel.
 
-const MAX_THREADS: usize = 8;
-const STACK_SIZE: usize = 16 * 1024;  // 16 KB per thread
+pub const MAX_THREADS: usize = 8;
+pub const STACK_SIZE: usize = 16 * 1024;  // 16 KB per thread
 
 /// Preallocated stack pool
 #[link_section = ".tstack"]
@@ -13,17 +13,13 @@ static mut STACK_FREE: [bool; MAX_THREADS] = [true; MAX_THREADS];
 /// Returns a pointer to the lowest available stack and its index in `STACKS`, 
 /// or `None` if full.
 pub unsafe fn stack_alloc() -> Option<(&'static mut [u8], usize)> {
-    let result = STACK_FREE
-        .iter()
-        .enumerate()
-        .position(|(_, &free)| free);
-    match result {
-        Some(i) => {
+    for i in 0..MAX_THREADS {
+        if STACK_FREE[i] {
             STACK_FREE[i] = false;
-            Some((&mut STACKS[i], i))
-        },
-        None => None
+            return Some((&mut STACKS[i], i));
+        }
     }
+    None
 }
 
 /// Frees a stack, making it available again

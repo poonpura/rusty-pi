@@ -5,15 +5,27 @@ mod start;
 
 use core::panic::PanicInfo;
 use libpi::gpio::*;
-// use libpi::time::*;
+use libpi::time::*;
 use libpi::uart::*;
+use libpi::threads::*;
 
 /// The entry point for the bare-metal kernel
 #[no_mangle]
+#[allow(static_mut_refs)]
 pub unsafe extern "C" fn notmain() -> ! {
     uart_init();
-    gpio_set_output(20);
+    SCHEDULER.fork(t1, 0);
+    SCHEDULER.cswitch();
+    loop {
+        wait();
+    }
+}
+
+unsafe extern "C" fn t1(i: u32) {
+    let _ = i;
     gpio_set_output(25);
+    gpio_set_output(20);
+    gpio_set_on(20);
     loop {
         uart_write("Light on from rusty-pi!\n");
         let c = uart_get8() as char;
@@ -34,8 +46,10 @@ pub unsafe extern "C" fn notmain() -> ! {
                 uart_put8('\n' as u8);
             }
         }
+        yield_thread();
     }
 }
+
 
 /// Panic handler (required because `no_std` removes the default panic handler)
 #[panic_handler]
