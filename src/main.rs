@@ -8,13 +8,19 @@ use libpi::gpio::*;
 use libpi::time::*;
 use libpi::uart::*;
 use libpi::threads::*;
+use libpi::io::*;
 
 /// The entry point for the bare-metal kernel
 #[no_mangle]
 #[allow(static_mut_refs)]
 pub unsafe extern "C" fn notmain() -> ! {
     uart_init();
-    SCHEDULER.fork(t1, 0);
+    gpio_set_output(25);
+    gpio_set_output(20);
+    gpio_set_on(20);
+    dsb();
+    SCHEDULER.fork(t1, 25);
+    gpio_set_on(25);
     SCHEDULER.cswitch();
     loop {
         wait();
@@ -23,9 +29,6 @@ pub unsafe extern "C" fn notmain() -> ! {
 
 unsafe extern "C" fn t1(i: u32) {
     let _ = i;
-    gpio_set_output(25);
-    gpio_set_output(20);
-    gpio_set_on(20);
     loop {
         uart_write("Light on from rusty-pi!\n");
         let c = uart_get8() as char;

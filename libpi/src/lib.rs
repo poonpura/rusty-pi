@@ -7,3 +7,5 @@ pub mod time;
 pub mod uart;
 pub mod tstack;
 pub mod threads;
+
+pub mod debug;
