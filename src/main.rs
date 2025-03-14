@@ -16,6 +16,7 @@ use libpi::io::*;
 pub unsafe extern "C" fn notmain() -> ! {
     uart_init();
     SCHEDULER.fork(threadone, 25);
+    SCHEDULER.fork(threadtwo, 11);
     SCHEDULER.cswitch();
     loop {
         wait();
@@ -48,6 +49,14 @@ unsafe extern "C" fn threadone(i: u32) {
                 uart_put8('\n' as u8);
             }
         }
+        yield_thread();
+    }
+}
+
+unsafe extern "C" fn threadtwo(i: u32) {
+    let _ = i;
+    loop {
+        gpio_toggle(25);
         yield_thread();
     }
 }
