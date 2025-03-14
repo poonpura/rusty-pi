@@ -62,6 +62,14 @@ pub unsafe fn gpio_write(pin: u8, b: u8) {
     }
 }
 
+pub unsafe fn gpio_toggle(pin: u8) {
+    match gpio_read(pin) {
+        1 => gpio_set_off(pin),
+        0 => gpio_set_on(pin),
+        _ => panic!("invalid bit!")
+    }
+}
+
 /// Returns the value of `pin`
 /// Precondition: `pin` is input
 pub unsafe fn gpio_read(pin: u8) -> u8 {

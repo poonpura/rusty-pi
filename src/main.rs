@@ -15,20 +15,19 @@ use libpi::io::*;
 #[allow(static_mut_refs)]
 pub unsafe extern "C" fn notmain() -> ! {
     uart_init();
-    gpio_set_output(25);
-    gpio_set_output(20);
-    gpio_set_on(20);
-    dsb();
-    SCHEDULER.fork(t1, 25);
-    gpio_set_on(25);
+    SCHEDULER.fork(threadone, 25);
     SCHEDULER.cswitch();
     loop {
         wait();
     }
 }
 
-unsafe extern "C" fn t1(i: u32) {
+unsafe extern "C" fn threadone(i: u32) {
     let _ = i;
+    gpio_set_output(25);
+    gpio_set_output(20);
+    dsb();
+    gpio_set_on(20);
     loop {
         uart_write("Light on from rusty-pi!\n");
         let c = uart_get8() as char;
