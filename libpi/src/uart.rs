@@ -67,7 +67,7 @@ pub unsafe fn uart_put8(x: u8) {
 }
 
 /// Writes a string to the UART, sending it character by character.
-pub unsafe fn uart_write(msg: &str) {
+pub unsafe fn uart_print(msg: &str) {
     for byte in msg.bytes() {
         uart_put8(byte);
     }

@@ -1,5 +1,6 @@
 /// Simple timer related structs and operations. 
 
+use core::arch::asm;
 use crate::io::*;
 use crate::threads::*;
 
@@ -8,7 +9,7 @@ const SYSTEM_TIMER: u32 = 0x20003004;
 /// nop
 #[inline(always)]
 pub unsafe fn wait() {
-    core::arch::asm!("nop", options(nostack, preserves_flags));
+    asm!("nop", options(nostack, preserves_flags));
 }
 
 /// Delays execution for `ms` milliseconds using the system timer.
@@ -26,7 +27,7 @@ pub struct Timer {
 
 impl Timer {
     /// Returns Timer struct that expires after `ms` milliseconds.
-    pub unsafe fn start(ms: u32) -> Self {
+    pub unsafe fn timer(ms: u32) -> Self {
         Self {
             stop_time: get32(SYSTEM_TIMER).wrapping_add(ms * 1000)
         }

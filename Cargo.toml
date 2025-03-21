@@ -1,4 +1,4 @@
-workspace = { members = ["libpi", "libunix"] }
+workspace = { members = ["libpi"] }
 [package]
 name = "rusty-pi"
 version = "0.1.0"

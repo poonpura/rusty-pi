@@ -66,4 +66,11 @@ SECTIONS {
         . = . + 0x20000;
         __symbol_tstack_end__ = .;
     }
+    .interrupt_table 0x100000 : {
+        . = ALIGN(8);
+        __symbol_interrupt_table_start__ = .;
+        KEEP(*(.interrupt_table))
+        . = ALIGN(8);
+        __symbol_interrupt_table_end__ = .;
+    }
 }

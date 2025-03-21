@@ -4,11 +4,15 @@ extern "C" {
     fn notmain(); 
 }
 
-/// Initialize stack pointer 
+/// Enter super mode, disable interrupts, and initialize stack pointer 
 #[no_mangle]
 #[link_section = ".text.boot"]
 pub unsafe extern "C" fn _start() -> ! {
     asm!(
+        "mov r0, #0x13", // 0b10011 - switch to svc      
+        "orr r0, r0, #(1 << 7)", // disable IRQ
+        "msr cpsr, r0",
+        "mcr p15, 0, r1, c7, c5, 4", // prefetch flush
         "ldr sp, =0x80000",  
         "bl _start2",     
         options(noreturn)

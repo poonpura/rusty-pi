@@ -9,14 +9,23 @@ use libpi::time::*;
 use libpi::uart::*;
 use libpi::threads::*;
 use libpi::io::*;
+use libpi::interrupts::*;
 
 /// The entry point for the bare-metal kernel
 #[no_mangle]
 #[allow(static_mut_refs)]
 pub unsafe extern "C" fn notmain() -> ! {
     uart_init();
-    SCHEDULER.fork(threadone, 25);
-    SCHEDULER.fork(threadtwo, 11);
+    gpio_set_output(5);
+    gpio_set_output(20);
+    gpio_set_output(25);
+    interrupt_init();
+    gpio_rising_edge_init(21);
+    //gpio_set_on(25);
+    //rx_irq_init(); // IRQ not enabled until cswitch into user thread
+    //SCHEDULER.fork(threadone, 25);
+    //SCHEDULER.fork(threadtwo, 11);
+    SCHEDULER.fork(threadthree, 5);
     SCHEDULER.cswitch();
     loop {
         wait();
@@ -25,12 +34,11 @@ pub unsafe extern "C" fn notmain() -> ! {
 
 unsafe extern "C" fn threadone(i: u32) {
     let _ = i;
-    gpio_set_output(25);
-    gpio_set_output(20);
+
     dsb();
     gpio_set_on(20);
     loop {
-        uart_write("Light on from rusty-pi!\n");
+        uart_print("Light on from rusty-pi!\n");
         let c = uart_get8() as char;
         match c {
             'g' => match gpio_read(20) {
@@ -44,7 +52,7 @@ unsafe extern "C" fn threadone(i: u32) {
                 _ => panic!("invalid bit!")
             }
             o => {
-                uart_write("Invalid key: ");
+                uart_print("Invalid key: ");
                 uart_put8(o as u8);
                 uart_put8('\n' as u8);
             }
@@ -55,9 +63,21 @@ unsafe extern "C" fn threadone(i: u32) {
 
 unsafe extern "C" fn threadtwo(i: u32) {
     let _ = i;
+    gpio_toggle(25);
+    yield_thread();
+    gpio_toggle(25);
+    yield_thread();
+    gpio_toggle(25);
+    exit_thread();
+}
+
+unsafe extern "C" fn threadthree(i: u32) {
+    let _ = i;
+    gpio_set_on(20);
+    dsb();
     loop {
-        gpio_toggle(25);
-        yield_thread();
+        gpio_toggle(20);
+        delay_ms(500);
     }
 }
 

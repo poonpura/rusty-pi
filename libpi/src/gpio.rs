@@ -62,6 +62,7 @@ pub unsafe fn gpio_write(pin: u8, b: u8) {
     }
 }
 
+/// Sets `pin` off if `pin` is on, and on otherwise.
 pub unsafe fn gpio_toggle(pin: u8) {
     match gpio_read(pin) {
         1 => gpio_set_off(pin),
@@ -71,7 +72,6 @@ pub unsafe fn gpio_toggle(pin: u8) {
 }
 
 /// Returns the value of `pin`
-/// Precondition: `pin` is input
 pub unsafe fn gpio_read(pin: u8) -> u8 {
     if pin >= 32 && pin != 47 { panic!("Read from invalid pin!"); }
     match pin {
