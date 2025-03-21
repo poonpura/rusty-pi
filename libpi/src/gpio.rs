@@ -1,3 +1,5 @@
+/// Simple GPIO support. 
+
 use crate::bits::*;
 use crate::io::*;
 

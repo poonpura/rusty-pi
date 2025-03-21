@@ -1,6 +1,8 @@
+/// Code to assist with debugging 
 
 const HEX_DIGITS: &[u8] = b"0123456789ABCDEF";
 
+/// Converts `value` to a hexadecimal string representation and stores it in `buf`
 pub fn u32_as_hex(value: u32, buffer: &mut [u8; 10]) -> &str {
     buffer[0] = b'0';
     buffer[1] = b'x';

@@ -27,7 +27,7 @@ pub struct Timer {
 
 impl Timer {
     /// Returns Timer struct that expires after `ms` milliseconds.
-    pub unsafe fn timer(ms: u32) -> Self {
+    pub unsafe fn set(ms: u32) -> Self {
         Self {
             stop_time: get32(SYSTEM_TIMER).wrapping_add(ms * 1000)
         }

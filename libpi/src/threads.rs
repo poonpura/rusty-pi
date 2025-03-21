@@ -3,10 +3,6 @@
 use core::arch::asm;
 use crate::tstack::*;
 
-use crate::gpio::*;
-use crate::debug::*;
-use crate::uart::*;
-
 /// Global counter for thread IDs
 static mut NEXT_TID: usize = 0;
 
@@ -137,8 +133,6 @@ impl TQueue {
             .as_ref()
             .expect("No next thread!")
             .regs;
-        let buf: &mut [u8; 10] = &mut [0; 10];
-        uart_print(u32_as_hex(regs[14], buf));
         load_registers(regs.as_ptr());
     }
 }
@@ -177,7 +171,6 @@ pub unsafe extern "C" fn save_registers(regs: *mut u32) {
 /// also loaded, this function also completes the context switch.
 #[inline(always)]
 pub unsafe extern "C" fn load_registers(regs: *const u32) {
-    //gpio_set_on(25);
     asm!( 
         "ldr r1, [r0, #64]",        
         "msr cpsr, r1",     

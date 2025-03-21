@@ -8,4 +8,5 @@ pub mod interrupts;
 pub mod tstack;
 pub mod threads;
 pub mod time;
+pub mod user;
 pub mod debug;

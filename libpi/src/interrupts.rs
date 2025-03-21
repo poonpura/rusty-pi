@@ -1,12 +1,12 @@
-/// Code for interrupt handling for UART RX interrupts.
+#![allow(dead_code)]
+/// Code for handling of GPIO (and hopefully UART RX) interrupts.
 
 use core::arch::{asm, global_asm};
 use crate::io::*;
 use crate::bits::*;
 use crate::uart::*;
 use crate::gpio::*;
-use crate::time::*;
-use crate::debug::*;
+use crate::user::*;
 
 const IRQ_BASE: u32 = 0x2000B200;
 const IRQ_BASIC_PENDING: u32 = IRQ_BASE;
@@ -20,13 +20,14 @@ const IRQ_DISABLE_1: u32 = IRQ_BASE + 0x1C;
 const IRQ_DISABLE_2: u32 = IRQ_BASE + 0x20;
 const IRQ_DISABLE_BASIC: u32 = IRQ_BASE + 0x24;
 
-pub const GPIO_BASE: u32       = 0x20200000;
-pub const GPREN0: u32          = GPIO_BASE + 0x4C;
-pub const GPREN1: u32          = GPIO_BASE + 0x50;
-pub const GPFEN0: u32          = GPIO_BASE + 0x58;
-pub const GPFEN1: u32          = GPIO_BASE + 0x5C;
-pub const GPEDS0: u32          = GPIO_BASE + 0x40;
+pub const GPIO_BASE: u32 = 0x20200000;
+pub const GPREN0: u32 = GPIO_BASE + 0x4C;
+pub const GPREN1: u32 = GPIO_BASE + 0x50;
+pub const GPFEN0: u32 = GPIO_BASE + 0x58;
+pub const GPFEN1: u32 = GPIO_BASE + 0x5C;
+pub const GPEDS0: u32 = GPIO_BASE + 0x40;
 
+// UART code that is not working yet 
 const AUX_BASE: u32 = 0x20215000;
 const AUX_MU_IER: u32 = AUX_BASE + 0x44;
 const AUX_MU_IIR: u32 = AUX_BASE + 0x48;
@@ -78,6 +79,7 @@ pub unsafe extern "C" fn disable_interrupts() {
     );
 }
 
+/// Interrupt handler code for IRQ interrupts 
 #[no_mangle]
 pub unsafe extern "C" fn interrupt_handler() {
     asm!(
@@ -92,9 +94,9 @@ pub unsafe extern "C" fn interrupt_handler() {
     );
 }
 
+/// Default handler for other interrupt types.
 #[no_mangle]
 pub unsafe extern "C" fn default_handler() {
-    //gpio_set_on(25);
     panic!("Unhandled exception!");
 }
 
@@ -106,23 +108,13 @@ pub unsafe fn interrupt_init() {
     put32(IRQ_DISABLE_2, 0xFFFFFFFF);
 
     let vector_base = &_interrupt_table as *const u32 as u32;
-    let buf: &mut [u8; 10] = &mut [0; 10];
-    //uart_print(u32_as_hex(vector_base, buf));
     dsb(); 
     vector_base_set(vector_base);
     dsb(); 
 }
 
-/// Initializes mini-UART RX IRQ and clears mini-UART RX FIFO.
-/// Precondition: `uart_init()` has been called.
-pub unsafe fn rx_irq_init() {
-    dsb();
-    put32(IRQ_ENABLE_1, bit_set(0, AUX_IRQ));
-    dsb();
-    put32(AUX_MU_IIR, 0b10);
-    put32(AUX_MU_IER, 0b10);
-}
-
+/// Enables rising edge detection interrupt on `pin`.
+/// Precondition: `pin < 32`
 pub unsafe fn gpio_rising_edge_init(pin: u8) {
     if pin >= 32 {
         return;
@@ -131,10 +123,11 @@ pub unsafe fn gpio_rising_edge_init(pin: u8) {
     put32(GPREN0, bit_set(get32(GPREN0), pin));
     dsb();
     put32(IRQ_ENABLE_2, bit_set(0, 17));
-    gpio_set_on(25);
     dsb();
 }
 
+/// Returns whether GPIO event is detected at `pin`.
+/// Precondition: `pin < 32`
 pub unsafe fn gpio_event_detected(pin: u8) -> bool {
     if pin >= 32 {
         false
@@ -146,6 +139,8 @@ pub unsafe fn gpio_event_detected(pin: u8) -> bool {
     }
 }
 
+/// Clears the GPIO interrupt pending bit at `pin`.
+/// Precondition: `pin < 32`
 pub unsafe fn gpio_event_clear(pin: u8) {
     if pin >= 32 {
         return;
@@ -155,45 +150,37 @@ pub unsafe fn gpio_event_clear(pin: u8) {
     dsb();
 }
 
+/// Interrupt vector for IRQ interrupts. 
 #[no_mangle]
 pub unsafe extern "C" fn interrupt_vector() {
     gpio_set_on(5);
     dsb();
+
     if !gpio_event_detected(21) {
-        return;
-    }
-    if gpio_read(21) == 0 {
-        gpio_event_clear(21);
-        gpio_set_off(5);
         return;
     }
 
     // Custom code that controls mini-UART and GPIO output using keystrokes.
-    while uart_has_data() {
-        let c = uart_get8() as char;
-        match c {
-            'g' => match gpio_read(20) {
-                1 => gpio_set_off(20),
-                0 => gpio_set_on(20),
-                _ => panic!("invalid bit!")
-            }
-            'r' => match gpio_read(25) {
-                1 => gpio_set_off(25),
-                0 => gpio_set_on(25),
-                _ => panic!("invalid bit!")
-            }
-            o => {
-                uart_print("Invalid key: ");
-                uart_put8(o as u8);
-                uart_put8('\n' as u8);
-            }
+    while gpio_read(21) == 1 {
+        while uart_has_data() {
+            let c = uart_get8() as char;
+            uart_put8(c as u8);
+            match c {
+                'g' => gpio_toggle(20),
+                'r' => gpio_toggle(25),
+                i if i.is_numeric() => spawn(i),
+                _ => continue
+            };
         }
+        dsb();
     }
 
-    put32(AUX_MU_IIR, 0b10);
-    dsb();
+    // Exit code 
+    gpio_event_clear(21);
+    gpio_set_off(5);
 }
 
+/// returns the current value vector base is set to.
 unsafe fn vector_base_get() -> u32 {
     let v;
     asm!(
@@ -204,10 +191,13 @@ unsafe fn vector_base_get() -> u32 {
     v
 }
 
+/// returns whether `v` is a valid vector base (not null and alignment is good)
 unsafe fn vector_base_check(v: u32) -> bool {
     (v != 0) && (v % (1 << 4) == 0)
 }
 
+/// set vector base
+/// Precondition: must not have been set already.
 unsafe fn vector_base_set(v: u32) {
     if !vector_base_check(v) {
         panic!("Illegal vector base!");
@@ -233,5 +223,16 @@ unsafe fn vector_base_set(v: u32) {
     if v != vector_base_get() {
         panic!("vector base set failed!");
     }
+}
+
+// NOT WORKING! TODO 
+/// Initializes mini-UART RX IRQ and clears mini-UART RX FIFO.
+/// Precondition: `uart_init()` has been called.
+pub unsafe fn rx_irq_init() {
+    dsb();
+    put32(IRQ_ENABLE_1, bit_set(0, AUX_IRQ));
+    dsb();
+    put32(AUX_MU_IIR, 0b10);
+    put32(AUX_MU_IER, 0b10);
 }
 
